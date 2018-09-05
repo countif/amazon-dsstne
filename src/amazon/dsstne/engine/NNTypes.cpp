@@ -633,6 +633,50 @@ template<typename T> bool NNDataSet<T>::SetSparseDataPoint(uint32_t n, uint32_t 
     return true;
 }
 
+template<typename T> NNDataSet<T>::NNDataSet(const string &name, NNDataSetEnums::Attributes attributes,
+                                             uint32_t examples, const NNLayer &layer)
+{
+
+  _name = name;
+  _dataType = NNDataSetEnums::getDataType<T>();
+  _attributes = attributes;
+  _examples = examples;
+  _uniqueExamples = examples;
+  _dimensions = layer.GetNumDimensions();
+  uint32_t ignored;
+  tie(_width, _height, _length, ignored) = layer.GetDimensions();
+
+  // _sharding, _minX, _minY set in NNDataSet::Shard()
+
+  if ((attributes & NNDataSetEnums::Attributes::Sparse) != 1)
+  {
+    // _stride only used for dense data
+    _stride = _width * _height * _length;
+    _vData.resize(_stride * _examples);
+    _vIndex.resize(_stride * _examples);
+
+  } else
+  {
+
+    static const double SPARSE_DENSITY = 0.1;
+    // sparse dataset
+    _sparseDataSize = (double) _width * (double) _height * (double) _length * (double) _examples * SPARSE_DENSITY;
+    _sparseDensity = SPARSE_DENSITY;
+
+    _vSparseStart.resize(_examples);
+    _vSparseEnd.resize(_examples);
+    _vSparseIndex.resize(_examples);
+    _vSparseData.resize(_sparseDataSize);
+
+    if ((attributes & NNDataSetEnums::Attributes::Weighted) == 1)
+    {
+      _vSparseWeight.resize(_sparseDataSize);
+
+    }
+  }
+
+}
+
 template<typename T> NNDataSet<T>::NNDataSet(const string& fname, uint32_t n) :
 _pbData(),
 _pbSparseData()
